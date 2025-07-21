@@ -1,13 +1,527 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>App Reparto</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007bff">
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>App Reparto (v2 Robusta)</title>
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#007bff">
+    <style>
+        :root {
+            --primary-color: #007bff; --secondary-color: #6c757d; --success-color: #28a745;
+            --danger-color: #dc3545; --info-color: #17a2b8; --warning-color: #ffc107;
+            --background-light: #f8f9fa; --card-background: #ffffff; --border-color: #e2e6ea;
+            --text-dark: #343a40; --text-light: #f8f9fa; --shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 16px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0; padding: 0; background-color: var(--background-light); display: flex;
+            flex-direction: column; height: 100vh; overflow: hidden; color: var(--text-dark);
+            -webkit-tap-highlight-color: transparent;
+        }
+        h2 { margin: 0; padding: 1rem 0.8rem; background-color: var(--card-background); border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow); z-index: 10; display: flex; justify-content: space-between; align-items: center; font-size: 1.5rem; }
+        h2 #turnoSelect { padding: 0.6rem 0.8rem; font-size: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: #f0f0f0; cursor: pointer; }
+        #app-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .info-panel { background-color: var(--primary-color); color: var(--text-light); padding: 0.8rem 1rem; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); z-index: 9; }
+        #tablaPedidosContainer { flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        #tablaPedidos { width: 100%; border-collapse: collapse; }
+        #tablaPedidos thead { position: sticky; top: 0; background-color: var(--secondary-color); color: var(--text-light); font-size: 1rem; text-align: left; z-index: 8; }
+        #tablaPedidos th { padding: 0.9rem 0.5rem; }
+        #tablaPedidos tbody tr { border-bottom: 1px solid var(--border-color); background-color: var(--card-background); cursor: pointer; }
+        #tablaPedidos td { padding: 1rem 0.5rem; font-size: 1rem; vertical-align: middle; }
+        #tablaPedidos .entregado-row { background-color: #e9ecef; color: var(--secondary-color); text-decoration: line-through; }
+        #tablaPedidos .devolucion-row { background-color: #fff3cd; }
+        .col-cliente-num { width: 10%; text-align: center; font-weight: bold; }
+        .col-orden { width: 15%; text-align: center; }
+        .col-nombre { width: 35%; }
+        .col-estado { width: 20%; text-align: center; }
+        .col-foto { width: 20%; text-align: center; }
+        .col-orden input { width: 90%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px; text-align: center; font-size: 1rem; box-sizing: border-box; }
+        .estado-pendiente { color: var(--danger-color); font-weight: bold; }
+        .estado-entregado { color: var(--success-color); font-weight: bold; }
+        .estado-devolucion { color: var(--warning-color); font-weight: bold; text-decoration: none !important; }
+        .foto-presente { color: var(--success-color); }
+        #contenedorBotonesInferior { display: flex; justify-content: space-around; padding: 0.8rem; background-color: var(--card-background); box-shadow: 0 -2px 8px rgba(0,0,0,0.1); flex-shrink: 0; gap: 0.8rem; }
+        .btn-global { flex: 1; background-color: var(--primary-color); color: var(--text-light); border: none; padding: 1rem 0; cursor: pointer; font-size: 1.1rem; border-radius: 8px; box-shadow: var(--shadow); -webkit-tap-highlight-color: transparent; position: relative; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+        .btn-global.btn-send { background-color: var(--success-color); }
+        .btn-global.btn-save-order { background-color: var(--info-color); }
+        .btn-global:disabled { background-color: #a0a0a0; cursor: not-allowed; box-shadow: none; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background-color: var(--card-background); width: 95%; max-height: 90vh; border-radius: 10px; padding: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; }
+        .modal-content h3 { font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem; }
+        .form-group-modal label { display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 1rem; }
+        .modal-input, .modal-select, .modal-textarea { width: 100%; padding: 0.9rem; font-size: 1.1rem; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; background-color: #f0f0f0; margin-bottom: 1rem; }
+        .modal-btn { background-color: var(--primary-color); color: var(--text-light); border: none; padding: 1rem; cursor: pointer; font-size: 1.1rem; border-radius: 8px; width: 100%; margin-top: 0.8rem; box-shadow: var(--shadow); -webkit-tap-highlight-color: transparent; }
+        .modal-btn.success { background-color: var(--success-color); }
+        .modal-btn.camera { background-color: var(--info-color); }
+        .modal-btn.close { background-color: var(--secondary-color); margin-top: 1.2rem; }
+        .modal-entregado-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--danger-color); font-size: 1.5rem; border-radius: 10px; z-index: 10; }
+        .payment-group { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 1rem; }
+        .payment-group legend { font-weight: bold; padding: 0 5px; }
+        .devolucion-group { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+        .devolucion-group input[type="checkbox"] { width: 25px; height: 25px; }
+        #mensaje { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--text-dark); color: var(--text-light); padding: 0.8rem 1.2rem; border-radius: 8px; font-size: 1.1rem; z-index: 1001; box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: center; min-width: 250px; max-width: 90%; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
+        #mensaje.show { opacity: 1; }
+        .spinner { width: 20px; height: 20px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #overlay-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: none; justify-content: center; align-items: center; color: white; font-size: 1.5em; text-align: center; flex-direction: column; gap: 15px; }
+    </style>
 </head>
 <body>
-  <h1>🚚 App Reparto - Mercado Limpio</h1>
-  <p>¡Bienvenido! Esta es la versión PWA.</p>
+    <div id="overlay-loading"><p>Cargando...</p></div>
+
+    <div id="app-container">
+        <h2>
+            <span>Mis Pedidos</span>
+            <select id="turnoSelect">
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+            </select>
+        </h2>
+        
+        <div class="info-panel">
+            <div id="infoRepartidor">Repartidor: ...</div>
+            <div id="contadorEntregados">Entregados: 0/0</div>
+        </div>
+
+        <div id="tablaPedidosContainer">
+            <table id="tablaPedidos">
+                <thead>
+                    <tr>
+                        <th class="col-cliente-num">Nº</th>
+                        <th class="col-orden">Orden</th>
+                        <th class="col-nombre">Cliente</th>
+                        <th class="col-estado">Estado</th>
+                        <th class="col-foto">Foto</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="contenedorBotonesInferior">
+            <button id="btnGuardarOrden" class="btn-global btn-save-order">💾 Guardar Orden</button>
+            <button id="btnAbrirRuta" class="btn-global">🗺️ Abrir Ruta</button>
+            <button id="btnEnviarRendicion" class="btn-global btn-send">📤 Enviar Rendición</button>
+        </div>
+    </div>
+
+    <div id="clienteModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modalEntregadoOverlay" class="modal-entregado-overlay" style="display: none;"><p>PEDIDO YA PROCESADO</p></div>
+            <h3 id="modalClienteNombre"></h3>
+            <p><strong>Importe Total: <span id="modalImporteTotal"></span></strong></p>
+
+            <fieldset class="payment-group">
+                <legend>Pago 1</legend>
+                <label for="modalFormaPago1">Forma de pago:</label>
+                <select id="modalFormaPago1" class="modal-select">
+                    <option value="">--Seleccionar--</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Cheque">Cheque</option>
+                </select>
+                <label for="modalImportePagado1">Importe pagado:</label>
+                <input type="number" id="modalImportePagado1" class="modal-input" min="0" step="0.01">
+            </fieldset>
+
+            <fieldset class="payment-group">
+                <legend>Pago 2 (Opcional)</legend>
+                <select id="modalFormaPago2" class="modal-select">
+                    <option value="">--Ninguno--</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Cheque">Cheque</option>
+                </select>
+                <label for="modalImportePagado2">Importe pagado:</label>
+                <input type="number" id="modalImportePagado2" class="modal-input" min="0" step="0.01">
+            </fieldset>
+            
+            <div class="devolucion-group">
+                <label for="modalDevolucion"><strong>¿Hubo Devolución?</strong></label>
+                <input type="checkbox" id="modalDevolucion">
+            </div>
+            <label for="modalNotasDevolucion">Notas de la devolución:</label>
+            <textarea id="modalNotasDevolucion" class="modal-textarea" rows="2" placeholder="Ej: Devolvió 2 unidades de..."></textarea>
+
+            <button id="btnModalTomarFoto" class="modal-btn camera">📷 Tomar Comprobante</button>
+            <button id="btnModalMarcarEntregado" class="modal-btn success">✅ Guardar y Marcar</button>
+            <button id="btnModalCerrar" class="modal-btn close">✖️ Cerrar</button>
+        </div>
+    </div>
+    <div id="mensaje"></div>
+
+<script>
+// =================================================================================
+// NUEVA LÓGICA DE LA APP - MÁS SIMPLE Y ROBUSTA
+// =================================================================================
+
+// --- 1. ESTADO Y ELEMENTOS GLOBALES ---
+const state = {
+    repartidor: '',
+    turnoActual: 'Mañana',
+    pedidos: [],
+    clienteSeleccionadoIndex: -1,
+    isSaving: false
+};
+
+const elements = {}; // Se llenará al iniciar la app
+
+document.addEventListener('DOMContentLoaded', main);
+
+// --- 2. FUNCIÓN PRINCIPAL DE ARRANQUE ---
+function main() {
+    console.log("APP INICIADA. Fase 1: Recolectando elementos del DOM.");
+    // Cache de todos los elementos del DOM para fácil acceso
+    elements.overlay = document.getElementById('overlay-loading');
+    elements.infoRepartidor = document.getElementById('infoRepartidor');
+    elements.contadorEntregados = document.getElementById('contadorEntregados');
+    elements.turnoSelect = document.getElementById('turnoSelect');
+    elements.tablaBody = document.querySelector('#tablaPedidos tbody');
+    elements.btnGuardarOrden = document.getElementById('btnGuardarOrden');
+    elements.btnAbrirRuta = document.getElementById('btnAbrirRuta');
+    elements.btnEnviarRendicion = document.getElementById('btnEnviarRendicion');
+    elements.modal = document.getElementById('clienteModal');
+    elements.modalNombre = document.getElementById('modalClienteNombre');
+    elements.modalImporteTotal = document.getElementById('modalImporteTotal');
+    elements.modalFormaPago1 = document.getElementById('modalFormaPago1');
+    elements.modalImportePagado1 = document.getElementById('modalImportePagado1');
+    elements.modalFormaPago2 = document.getElementById('modalFormaPago2');
+    elements.modalImportePagado2 = document.getElementById('modalImportePagado2');
+    elements.modalDevolucion = document.getElementById('modalDevolucion');
+    elements.modalNotas = document.getElementById('modalNotasDevolucion');
+    elements.modalOverlayEntregado = document.getElementById('modalEntregadoOverlay');
+    
+    // Centralización de todos los listeners de eventos
+    elements.turnoSelect.addEventListener('change', () => cargarReparto(elements.turnoSelect.value));
+    elements.btnGuardarOrden.addEventListener('click', guardarOrden);
+    elements.btnAbrirRuta.addEventListener('click', abrirRuta);
+    elements.btnEnviarRendicion.addEventListener('click', enviarRecibos);
+    document.getElementById('btnModalTomarFoto').addEventListener('click', tomarFoto);
+    document.getElementById('btnModalMarcarEntregado').addEventListener('click', marcarEntregadoYGuardar);
+    document.getElementById('btnModalCerrar').addEventListener('click', cerrarModal);
+
+    console.log("Fase 2: Inicializando repartidor.");
+    inicializarRepartidor();
+}
+
+function inicializarRepartidor() {
+    const hoy = new Date();
+    const claveStorage = `repartidor_${hoy.toISOString().split('T')[0]}`;
+    let nombreGuardado = localStorage.getItem(claveStorage);
+
+    if (!nombreGuardado) {
+        nombreGuardado = prompt("🧑‍🔧 Ingresa tu nombre para comenzar:");
+        if (!nombreGuardado || !nombreGuardado.trim()) {
+            document.body.innerHTML = '<h1>Debe ingresar un nombre para continuar. Recargue la página.</h1>';
+            return;
+        }
+        localStorage.setItem(claveStorage, nombreGuardado);
+    }
+    
+    state.repartidor = nombreGuardado.trim();
+    elements.infoRepartidor.innerText = `Repartidor: ${state.repartidor}`;
+    console.log(`Fase 3: Repartidor '${state.repartidor}' listo. Verificando estado de la jornada.`);
+    
+    verificarEstadoJornada();
+}
+
+function verificarEstadoJornada() {
+    mostrarOverlay("Verificando jornada...");
+    google.script.run
+        .withSuccessHandler(dayIsComplete => {
+            console.log("Respuesta de verificación de jornada:", dayIsComplete);
+            if (dayIsComplete) {
+                ocultarOverlay();
+                document.getElementById('app-container').innerHTML = '<div style="text-align:center; padding:2rem;"><h2>🎉 ¡Jornada Finalizada! 🎉</h2><p>Todos los repartos del día han sido completados y enviados.</p></div>';
+                return;
+            }
+            console.log("Fase 4: Jornada no finalizada. Cargando reparto para el turno:", state.turnoActual);
+            cargarReparto(state.turnoActual);
+        })
+        .withFailureHandler(error => {
+            console.error("Error CRÍTICO al verificar jornada:", error);
+            mostrarMensaje("Error grave al iniciar. Revisa la consola.", "error");
+            ocultarOverlay();
+        })
+        .isDayCompleteApp(state.repartidor);
+}
+
+function cargarReparto(turno) {
+    state.turnoActual = turno;
+    mostrarOverlay(`Cargando turno ${turno}...`);
+    console.log(`Iniciando llamada al servidor para obtener reparto del turno '${turno}'`);
+
+    google.script.run
+        .withSuccessHandler(data => {
+            ocultarOverlay();
+            console.log("Respuesta del servidor para obtenerDatosRepartoApp:", data);
+            
+            if (data && Array.isArray(data.pedidos)) {
+                state.pedidos = data.pedidos;
+                renderizarTabla();
+                actualizarUI(data.isTurnoFinalizado);
+                if (data.isTurnoFinalizado) {
+                    mostrarMensaje(`Turno ${turno} ya finalizado. Mostrando datos.`, "info");
+                }
+            } else {
+                console.error("Los datos recibidos del servidor no son válidos:", data);
+                mostrarMensaje("Error: formato de datos incorrecto.", "error");
+                state.pedidos = [];
+                renderizarTabla();
+                actualizarUI(false);
+            }
+        })
+        .withFailureHandler(error => {
+            ocultarOverlay();
+            console.error(`Error al llamar a obtenerDatosRepartoApp para el turno '${turno}':`, error);
+            mostrarMensaje(`Error al cargar el turno: ${error.message}`, "error");
+        })
+        .obtenerDatosRepartoApp(turno, state.repartidor);
+}
+
+// --- 3. FUNCIONES DE RENDERIZADO Y UI ---
+function renderizarTabla() {
+    elements.tablaBody.innerHTML = '';
+    if (state.pedidos.length === 0) {
+        elements.tablaBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">No hay pedidos para mostrar.</td></tr>';
+        return;
+    }
+
+    state.pedidos.sort((a, b) => {
+        if (!a.entregado && b.entregado) return -1;
+        if (a.entregado && !b.entregado) return 1;
+        return (Number(a.orden) || Infinity) - (Number(b.orden) || Infinity);
+    });
+
+    state.pedidos.forEach((cliente, index) => {
+        const tr = document.createElement('tr');
+        tr.dataset.index = index;
+        
+        let rowClass = '';
+        if (cliente.entregado) rowClass = 'entregado-row';
+        else if (cliente.devolucion) rowClass = 'devolucion-row';
+        tr.className = rowClass;
+
+        let estadoHTML = cliente.entregado ? `<span class="estado-entregado">✅ Entregado</span>` : `<span class="estado-pendiente">Pendiente</span>`;
+        if (cliente.devolucion) estadoHTML += ` <span class="estado-devolucion">⚠️ Devolución</span>`;
+        
+        tr.innerHTML = `
+            <td class="col-cliente-num" onclick="abrirModal(${index})">${cliente.numeroCliente}</td>
+            <td class="col-orden"><input type="number" min="1" value="${cliente.orden || ''}" oninput="state.pedidos[${index}].orden = parseInt(this.value) || 0" ${cliente.entregado ? 'disabled' : ''}></td>
+            <td class="col-nombre" onclick="abrirModal(${index})">${cliente.nombre}</td>
+            <td class="col-estado" onclick="abrirModal(${index})">${estadoHTML}</td>
+            <td class="col-foto" onclick="abrirModal(${index})">${cliente.comprobanteId ? '📷' : ''}</td>
+        `;
+        elements.tablaBody.appendChild(tr);
+    });
+}
+
+function actualizarUI(turnoFinalizado = false) {
+    const total = state.pedidos.length;
+    const entregados = state.pedidos.filter(p => p.entregado).length;
+    elements.contadorEntregados.innerText = `Entregados: ${entregados}/${total}`;
+
+    const todosEntregados = total > 0 && entregados === total;
+    const hayFotosSubiendo = state.pedidos.some(p => p._isUploadingPhoto);
+
+    elements.btnGuardarOrden.disabled = turnoFinalizado;
+    elements.btnAbrirRuta.disabled = turnoFinalizado;
+    elements.btnEnviarRendicion.disabled = turnoFinalizado || !todosEntregados || hayFotosSubiendo;
+}
+
+// --- 4. LÓGICA DEL MODAL ---
+function abrirModal(index) {
+    const cliente = state.pedidos[index];
+    if (!cliente) return;
+    state.clienteSeleccionadoIndex = index;
+
+    elements.modalNombre.innerText = cliente.nombre;
+    elements.modalImporteTotal.innerText = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cliente.importeTotal || 0);
+    elements.modalFormaPago1.value = cliente.formaPago1 || '';
+    elements.modalImportePagado1.value = cliente.importePagado1 || '';
+    elements.modalFormaPago2.value = cliente.formaPago2 || '';
+    elements.modalImportePagado2.value = cliente.importePagado2 || '';
+    elements.modalDevolucion.checked = cliente.devolucion || false;
+    elements.modalNotas.value = cliente.notasDevolucion || '';
+
+    const isEditable = !cliente.entregado;
+    [elements.modalFormaPago1, elements.modalImportePagado1, elements.modalFormaPago2, elements.modalImportePagado2, elements.modalDevolucion, elements.modalNotas, document.getElementById('btnModalTomarFoto'), document.getElementById('btnModalMarcarEntregado')].forEach(el => el.disabled = !isEditable);
+    elements.modalOverlayEntregado.style.display = isEditable ? 'none' : 'flex';
+    
+    elements.modal.classList.add('active');
+}
+
+function cerrarModal() {
+    elements.modal.classList.remove('active');
+    state.clienteSeleccionadoIndex = -1;
+}
+
+function marcarEntregadoYGuardar() {
+    if (state.isSaving || state.clienteSeleccionadoIndex < 0) return;
+    
+    const cliente = state.pedidos[state.clienteSeleccionadoIndex];
+    
+    // Guardar datos del modal al objeto
+    cliente.formaPago1 = elements.modalFormaPago1.value;
+    cliente.importePagado1 = parseFloat(elements.modalImportePagado1.value) || 0;
+    cliente.formaPago2 = elements.modalFormaPago2.value;
+    cliente.importePagado2 = parseFloat(elements.modalImportePagado2.value) || 0;
+    cliente.devolucion = elements.modalDevolucion.checked;
+    cliente.notasDevolucion = elements.modalNotas.value.trim();
+
+    if (!cliente.devolucion && !cliente.formaPago1 && cliente.importeTotal > 0) {
+        return mostrarMensaje("Debe registrar un pago o marcar como devolución.", "error");
+    }
+
+    cliente.entregado = true;
+    
+    state.isSaving = true;
+    mostrarOverlay("Guardando...");
+
+    google.script.run
+        .withSuccessHandler(() => {
+            ocultarOverlay();
+            state.isSaving = false;
+            mostrarMensaje("Pedido guardado.", "success");
+            cerrarModal();
+            renderizarTabla();
+            actualizarUI();
+        })
+        .withFailureHandler(error => {
+            ocultarOverlay();
+            state.isSaving = false;
+            cliente.entregado = false; // Revertir si falla
+            mostrarMensaje(`Error al guardar: ${error.message}`, "error");
+        })
+        .guardarDatosApp([cliente]);
+}
+
+// --- 5. LÓGICA DE BOTONES DE ACCIÓN ---
+function guardarOrden() {
+    mostrarOverlay("Guardando orden...");
+    const datosOrden = state.pedidos.map(p => ({ numeroCliente: p.numeroCliente, orden: p.orden }));
+    
+    google.script.run
+        .withSuccessHandler(() => {
+            ocultarOverlay();
+            renderizarTabla();
+            mostrarMensaje("Orden guardado con éxito.", "success");
+        })
+        .withFailureHandler(err => {
+            ocultarOverlay();
+            mostrarMensaje(`Error al guardar orden: ${err.message}`, "error");
+        })
+        .guardarDatosApp(datosOrden);
+}
+
+function abrirRuta() {
+    mostrarOverlay("Generando ruta...");
+    google.script.run
+        .withSuccessHandler(url => {
+            ocultarOverlay();
+            if(url) window.open(url, '_blank');
+            else mostrarMensaje('No hay clientes pendientes para generar la ruta.', 'info');
+        })
+        .withFailureHandler(err => {
+            ocultarOverlay();
+            mostrarMensaje(`Error al generar ruta: ${err.message}`, 'error');
+        })
+        .obtenerUrlRutaApp(state.turnoActual);
+}
+
+function enviarRecibos() {
+    if (!confirm(`¿Enviar la rendición para el turno ${state.turnoActual}? Esta acción es irreversible.`)) return;
+    
+    mostrarOverlay("Enviando rendición...");
+    google.script.run
+        .withSuccessHandler(mensaje => {
+            ocultarOverlay();
+            mostrarMensaje(mensaje, "success", 5000);
+            
+            if (state.turnoActual === 'Mañana') {
+                elements.turnoSelect.value = 'Tarde';
+                cargarReparto('Tarde');
+            } else {
+                verificarEstadoJornada(); // Para mostrar la pantalla de "Jornada Finalizada"
+            }
+        })
+        .withFailureHandler(err => {
+            ocultarOverlay();
+            mostrarMensaje(`Error al enviar: ${err.message}`, "error");
+        })
+        .enviarRecibosApp(state.repartidor, state.turnoActual);
+}
+
+function tomarFoto() {
+    if (state.clienteSeleccionadoIndex < 0) return;
+    const cliente = state.pedidos[state.clienteSeleccionadoIndex];
+    if (cliente._isUploadingPhoto) return;
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'camera';
+
+    fileInput.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        cliente._isUploadingPhoto = true;
+        actualizarUI();
+        mostrarOverlay("Subiendo foto...");
+        
+        const reader = new FileReader();
+        reader.onload = event => {
+            const base64data = event.target.result.split(',')[1];
+            google.script.run
+                .withSuccessHandler(fileId => {
+                    cliente.comprobanteId = fileId;
+                    cliente._isUploadingPhoto = false;
+                    ocultarOverlay();
+                    actualizarUI();
+                    renderizarTabla();
+                    mostrarMensaje("Foto subida con éxito.", "success");
+                })
+                .withFailureHandler(err => {
+                    cliente._isUploadingPhoto = false;
+                    ocultarOverlay();
+                    actualizarUI();
+                    mostrarMensaje(`Error al subir foto: ${err.message}`, "error");
+                })
+                .subirComprobanteImagenApp(base64data, cliente.numeroCliente);
+        };
+        reader.readAsDataURL(file);
+    };
+    fileInput.click();
+}
+
+// --- 6. FUNCIONES AUXILIARES ---
+function mostrarOverlay(texto) {
+    elements.overlay.querySelector('p').innerText = texto;
+    elements.overlay.style.display = 'flex';
+}
+
+function ocultarOverlay() {
+    elements.overlay.style.display = 'none';
+}
+
+function mostrarMensaje(texto, tipo = 'info', duracion = 3500) {
+    const div = document.getElementById('mensaje');
+    div.innerText = texto;
+    const colors = { error: 'var(--danger-color)', success: 'var(--success-color)', info: 'var(--text-dark)' };
+    div.style.backgroundColor = colors[tipo] || colors.info;
+    div.classList.add('show');
+    setTimeout(() => div.classList.remove('show'), duracion);
+}
+
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js")
+        .then(reg => console.log("✅ Service Worker registrado:", reg.scope))
+        .catch(err => console.error("❌ Error al registrar SW:", err));
+    });
+  }
+</script>
 </body>
 </html>
